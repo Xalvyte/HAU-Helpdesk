@@ -40,7 +40,7 @@ def download_pdf_from_supabase(pdf_file_name):
         return False
 
 # Function to split text into chunks that respect the token limit
-def split_text_into_chunks(text, chunk_size=1500):  # Keeping each chunk under the token limit
+def split_text_into_chunks(text, chunk_size=1000):  # Keeping each chunk under the token limit
     words = text.split()
     for i in range(0, len(words), chunk_size):
         yield ' '.join(words[i:i + chunk_size])

@@ -7,8 +7,8 @@ import time
 app = Flask(__name__)
 
 # Supabase settings
-SUPABASE_URL = "https://your-supabase-url"
-SUPABASE_KEY = "your-supabase-key"
+SUPABASE_URL = "https://jzmjrzydykbdqklegzbe.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp6bWpyenlkeWtiZHFrbGVnemJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjkwOTYyOTIsImV4cCI6MjA0NDY3MjI5Mn0.-vk8oK4ovtUUK2O_lPMwOeGqoTEuDVK6PHbd86GM9gQ"
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Groq AI settings

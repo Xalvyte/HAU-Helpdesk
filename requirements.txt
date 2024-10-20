@@ -79,6 +79,4 @@ websockets==12.0
 Werkzeug==3.0.4
 yarl==1.15.5
 zipp==3.20.2
-celery
-redis
 

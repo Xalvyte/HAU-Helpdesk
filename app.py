@@ -3,12 +3,10 @@ import requests
 from flask import Flask, request, jsonify
 from supabase import create_client, Client
 import time
+from celery import Celery
+import os
 
 app = Flask(__name__)
-
-@app.route('/')
-def index():
-    return "Hello, this is the homepage of your app!"
 
 # Initialize Supabase client
 SUPABASE_URL = "https://jzmjrzydykbdqklegzbe.supabase.co"
@@ -40,13 +38,25 @@ def download_pdf_from_supabase(pdf_file_name):
         return False
 
 # Function to split text into chunks that respect the token limit
-def split_text_into_chunks(text, chunk_size=1000):  # Keeping each chunk under the token limit
+def split_text_into_chunks(text, chunk_size=1500):  # Keeping each chunk under the token limit
     words = text.split()
     for i in range(0, len(words), chunk_size):
         yield ' '.join(words[i:i + chunk_size])
 
+# Celery Configuration
+def make_celery(app):
+    celery = Celery(
+        app.import_name,
+        backend=os.getenv("REDIS_URL"),
+        broker=os.getenv("REDIS_URL")
+    )
+    celery.conf.update(app.config)
+    return celery
 
-def query_groq_ai(text):
+celery = make_celery(app)
+
+@celery.task
+def query_groq_ai_task(text):
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json",
@@ -80,9 +90,6 @@ def query_groq_ai(text):
     # Return combined responses from the AI
     return ' '.join(ai_responses)
 
-
-
-
 # API route to scan the PDF document, send to Groq AI, and return AI's response
 @app.route("/scan", methods=["POST"])
 def scan_document():
@@ -99,10 +106,21 @@ def scan_document():
     # Extract text from the PDF
     extracted_text = extract_text_from_pdf("downloaded_pdf.pdf")
 
-    # Send the extracted text to Groq AI
-    ai_response = query_groq_ai(extracted_text)
+    # Send the extracted text to Celery to process in the background
+    task = query_groq_ai_task.apply_async(args=[extracted_text])
 
-    return jsonify({"ai_response": ai_response})
+    return jsonify({"task_id": task.id, "status": "Task started"}), 202
+
+# Add a route to check the status of a Celery task
+@app.route('/task-status/<task_id>', methods=['GET'])
+def get_task_status(task_id):
+    task = query_groq_ai_task.AsyncResult(task_id)
+    if task.state == 'PENDING':
+        return jsonify({"status": "Task is pending"}), 200
+    elif task.state == 'SUCCESS':
+        return jsonify({"status": "Task completed", "result": task.result}), 200
+    else:
+        return jsonify({"status": "Task in progress"}), 200
 
 if __name__ == "__main__":
     app.run(debug=True)
